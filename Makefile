@@ -1,6 +1,6 @@
 all: picboy
 picboy:
-	@cc -pedantic Memory.c posix_main.c -o picboy
+	@cc -pedantic Core.c Memory.c posix_main.c -o picboy
 
 .PHONY: clean
 clean:

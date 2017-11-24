@@ -15,7 +15,7 @@ int main() {
     uint32 address = 0;
     struct Memory* memory = malloc(sizeof(struct Memory));
     memory->accessCart = accessCart;
-    while (address < sizeof(game)) {
+    while (address < sizeof(game) - 3) {
         printf("%08x\n", Memory_read(memory, address++));
     }
 }

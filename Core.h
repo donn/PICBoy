@@ -14,7 +14,7 @@ struct Core {
             byte E;
             byte H;
             byte L;
-            byte __unused[4];
+            byte unused[4];
         } octets;
 
         struct {
@@ -27,10 +27,13 @@ struct Core {
         } sedectets;
     } registers;
 
+    short* rpTable;
+    short* rTable;
+
     struct Memory *memory;
 };
 
-void Core_initialize(Core* core);
-void Core_machineCycle(Core* core);
+void Core_initialize(struct Core* core);
+void Core_machineCycle(struct Core* core);
 
 #endif

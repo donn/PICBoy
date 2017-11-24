@@ -43,6 +43,47 @@ uint32 Memory_read(struct Memory* memory, word address) {
     }
 }
 
+byte* Memory_point(struct Memory* memory, word address) {
+    if ((0x0000 <= address) && (address < 0x4000)) {
+        //ROM BANK #0
+        return NULL; 
+    } else if ((0x4000 <= address) && (address < 0x8000)) {
+        //SWITCHABLE ROM BANK
+        //TO-DO: MBC
+        return NULL;
+    } else if ((0x8000 <= address) && (address < 0xA000)) {
+        //VRAM 
+        return &memory->vram[address % 8192];
+    } else if ((0xA000 <= address) && (address < 0xC000)) {
+        //SWITCHABLE RAM BANK
+        //TO-DO: MBC
+        return NULL;
+    } else if ((0xC000 <= address) && (address < 0xFE00)) {
+        //INTERNAL RAM (WRAPS AROUND)
+        return &memory->sram[address % 8192];
+    } else if ((0xFE00 <= address) && (address < 0xFEA0)) {
+        //SPRITE ATTRIBUTE MEMORY (OAM)
+        //TO-DO: Sprite attributes
+        return 0; 
+    } else if ((0xFEA0 <= address) && (address < 0xFF00)) {
+        //EMPTY
+        return 0;
+    } else if ((0xFF00 <= address) && (address < 0xFF4C)) {
+        //I/O PORTS
+        //TO-DO: I/O
+        return 0;
+    } else if ((0xFF4C <= address) && (address < 0xFF80)) {
+        //EMPTY
+        return 0;
+    } else if ((0xFF80 <= address) && (address < 0xFFFF)) {
+        //INTERNAL RAM (WHAT THE ACTUAL HELL)
+        return 0;
+    } else {
+        //INTERRUPT ENABLE REGISTER
+        return &memory->interruptEnableRegister;
+    }
+}
+
 void Memory_write(struct Memory* memory, word address, word data, bool singleByte) {
     //No point honoring requests addressed before this point
     if ((0x8000 <= address) && (address < 0xA000)) {

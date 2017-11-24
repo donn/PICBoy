@@ -9,6 +9,8 @@ struct Memory {
     byte interruptEnableRegister;
 };
 
+void Memory_write(struct Memory* memory, word address, word data, bool singleByte);
 uint32 Memory_read(struct Memory* memory, word address);
+byte* Memory_point(struct Memory* memory, word address);
 
 #endif
