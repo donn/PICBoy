@@ -117,34 +117,194 @@ static void ldi8(struct Core* core, uint32 instruction, byte x, byte y, byte z, 
     rTable(core, y)[0] = (instruction >> 8) & 0xFF;
 }
 
+//ZNHC0000
 static void rlca(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Rotate left, old bit 7 set to carry and new bit 0
+    bit last = core->registers.octets.A >> 7;
+    core->registers.octets.A <<= 1;
+    core->registers.octets.A |= last;
+
+    if (last) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
 }
 static void rrca(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Rotate right, old bit 0 set to carry and new bit 7
+    bit first = core->registers.octets.A & 1;
+    core->registers.octets.A >>= 1;
+    core->registers.octets.A |= (first << 7);
+
+    if (first) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
 }
 static void rla(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+//Rotate left, old bit 7 set to carry and new bit 0
+    bit last = core->registers.octets.A >> 7;
+    core->registers.octets.A <<= 1;
+    core->registers.octets.A |= TEST_BIT(core->registers.octets.F, 4);
+
+    if (last) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
 }
 static void rra(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Rotate right, old bit 0 set to carry and new bit 7
+    bit first = core->registers.octets.A & 1;
+    core->registers.octets.A >>= 1;
+    core->registers.octets.A |= (TEST_BIT(core->registers.octets.F, 4) << 7);
+
+    if (first) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
 }
 static void daa(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Binary coded decimal adjust accumulator
+    byte units = core->registers.octets.A % 10;
+    byte tens  = core->registers.octets.A / 10;
+    bool carry = false;
+    if (tens > 10) {
+        tens /= 10;
+    }
+
+    core->registers.octets.A = (tens << 4) | units;
+
+    if (carry) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+    
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, H_FLAG);
 }
 static void cpl(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    core->registers.octets.A = ~core->registers.octets.A;
+
+    SET_BIT(core->registers.octets.F, N_FLAG);
+    SET_BIT(core->registers.octets.F, H_FLAG);
 }
 static void scf(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //I can now see why people appreciate RISC
+    SET_BIT(core->registers.octets.F, C_FLAG);
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
 }
 static void ccf(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    if (TEST_BIT(core->registers.octets.F, 4)) {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    }
+    
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
 }
 
 
 static void ld(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Load (i.e. move)
+    rTable(core, y)[0] = rTable(core, z)[0];
 }
 
 static void halt(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Catch fire or something idfk
 }
 
 
 static void add(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    byte original = core->registers.octets.A;
+    core->registers.octets.A += rTable(core, z)[0];
+
+    if ((core->registers.octets.A & 0xF) < (original & 0xF)) {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    } else {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    }
+
+    if (core->registers.octets.A < original) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+    
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
 }
 static void adc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    byte original = core->registers.octets.A;
+    core->registers.octets.A = core->registers.octets.A + rTable(core, z)[0] + TEST_BIT(core->registers.octets.F, C_FLAG);
+
+    if ((core->registers.octets.A & 0xF) < (original & 0xF)) {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    } else {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    }
+
+    if (core->registers.octets.A < original) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+    
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
 }
 static void sub(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
 }
