@@ -30,8 +30,8 @@ struct Core {
         word sedectetArray[6];
     } registers;
 
-    word* rpTable;
-    word* rTable;
+    bool propagateEnableInterrupts, propagateDisableInterrupts;
+    bool interrupts;
 
     struct Memory *memory;
 };

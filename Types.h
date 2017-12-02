@@ -17,7 +17,7 @@
 #define RESET_BIT(i, j) do { i = i & ~(1 << j); } while (0)
 #define TEST_BIT(i, j)  ((i >> j) & 1)
 
-#define SIGN_EXTEND(i) (word)(int16_t)(int8_t)(i)
+#define SIGN_EXTEND(i) (word)(int16_t)(int8_t)(uint8_t)(i)
 
 #define C_FLAG 4
 #define H_FLAG 5

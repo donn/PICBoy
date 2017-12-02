@@ -20,8 +20,8 @@ class Integer
     end
 end
 
-for i in 0...256
-     if i.x == 3 && i.z == 0
+for i in 0..255
+     if i.x == 3 && i.z == 6
          puts i.hex
     end
 end
