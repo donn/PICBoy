@@ -25,13 +25,38 @@ static byte* rTable(struct Core* core, byte y) {
     }
 }
 
+#define rp2Table(core, p) &core->registers.sedectetArray[(y + 1) % 4]
+
+static void jr(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q);
+
 static void jrc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+//Conditional return
+    switch (y) {
+        case 3:
+            if (TEST_BIT(core->registers.octets.F, C_FLAG)) {
+                jr(core, instruction, x, y, z, p, q);
+            }
+        case 2:
+            if (!TEST_BIT(core->registers.octets.F, C_FLAG)) {
+                jr(core, instruction, x, y, z, p, q);
+            }
+        case 1:
+            if (TEST_BIT(core->registers.octets.F, Z_FLAG)) {
+                jr(core, instruction, x, y, z, p, q);
+            }
+        default: 
+            if (!TEST_BIT(core->registers.octets.F, Z_FLAG)) {
+                jr(core, instruction, x, y, z, p, q);
+            }
+    }
 }
 static void jr(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    core->registers.sedectets.PC += SIGN_EXTEND((instruction >> 8) & 0xFF);
 }
 static void stop(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
 }
 static void ldsp(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    Memory_write(core->memory, (instruction >> 8) & 0xFF, core->registers.sedectets.SP, false);
 }
 static void nop(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
     //No operation
@@ -209,6 +234,7 @@ static void daa(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
     bool carry = false;
     if (tens > 10) {
         tens /= 10;
+        carry = true;
     }
 
     core->registers.octets.A = (tens << 4) | units;
@@ -277,6 +303,8 @@ static void add(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
     } else {
         RESET_BIT(core->registers.octets.F, C_FLAG);
     }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
     
     if (!core->registers.octets.A) {
         SET_BIT(core->registers.octets.F, Z_FLAG);
@@ -286,7 +314,7 @@ static void add(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
 }
 static void adc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
     byte original = core->registers.octets.A;
-    core->registers.octets.A = core->registers.octets.A + rTable(core, z)[0] + TEST_BIT(core->registers.octets.F, C_FLAG);
+    core->registers.octets.A += (rTable(core, z)[0] + TEST_BIT(core->registers.octets.F, C_FLAG));
 
     if ((core->registers.octets.A & 0xF) < (original & 0xF)) {
         SET_BIT(core->registers.octets.F, H_FLAG);
@@ -299,6 +327,8 @@ static void adc(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
     } else {
         RESET_BIT(core->registers.octets.F, C_FLAG);
     }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
     
     if (!core->registers.octets.A) {
         SET_BIT(core->registers.octets.F, Z_FLAG);
@@ -307,39 +337,218 @@ static void adc(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
     }
 }
 static void sub(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    byte original = core->registers.octets.A;
+    core->registers.octets.A -= rTable(core, z)[0];
+
+    if ((core->registers.octets.A & 0xF) > (original & 0xF)) {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    } else {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    }
+
+    if (core->registers.octets.A > original) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    SET_BIT(core->registers.octets.F, N_FLAG);
+    
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
 }
 static void sbc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    byte original = core->registers.octets.A;
+    core->registers.octets.A -= (rTable(core, z)[0] + TEST_BIT(core->registers.octets.F, C_FLAG));
+
+    if ((core->registers.octets.A & 0xF) > (original & 0xF)) {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    } else {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    }
+
+    if (core->registers.octets.A > original) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    SET_BIT(core->registers.octets.F, N_FLAG);
+    
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
 }
 static void and(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    core->registers.octets.A &= rTable(core, z)[0];
+
+    SET_BIT(core->registers.octets.F, H_FLAG);
+    RESET_BIT(core->registers.octets.F, C_FLAG);
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
 }
 static void xor(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    core->registers.octets.A ^= rTable(core, z)[0];
+
+    RESET_BIT(core->registers.octets.F, H_FLAG);
+    RESET_BIT(core->registers.octets.F, C_FLAG);
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
 }
 static void or(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    core->registers.octets.A |= rTable(core, z)[0];
+
+    RESET_BIT(core->registers.octets.F, H_FLAG);
+    RESET_BIT(core->registers.octets.F, C_FLAG);
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
 }
 static void cp(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    byte new = core->registers.octets.A - rTable(core, z)[0];
+
+    if ((new & 0xF) > (core->registers.octets.A & 0xF)) {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    } else {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    }
+
+    if (new > core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    SET_BIT(core->registers.octets.F, N_FLAG);
+    
+    if (!new) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
 }
 
+static void ret(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q);
 
-static void retc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void retcc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Conditional return
+    switch (y) {
+        case 3:
+            if (TEST_BIT(core->registers.octets.F, C_FLAG)) {
+                ret(core, instruction, x, y, z, p, q);
+            }
+        case 2:
+            if (!TEST_BIT(core->registers.octets.F, C_FLAG)) {
+                ret(core, instruction, x, y, z, p, q);
+            }
+        case 1:
+            if (TEST_BIT(core->registers.octets.F, Z_FLAG)) {
+                ret(core, instruction, x, y, z, p, q);
+            }
+        default: 
+            if (!TEST_BIT(core->registers.octets.F, Z_FLAG)) {
+                ret(core, instruction, x, y, z, p, q);
+            }
+    }
 }
 
 static void pop(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Pop from stack, place in register pair
+    *rp2Table(core, p)= Memory_read(core->memory, core->registers.sedectets.SP) & 0xFF;
+    core->registers.sedectets.SP += 2;
 }
 static void ret(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Pop from stack, jump
+    core->registers.sedectets.PC = Memory_read(core->memory, core->registers.sedectets.SP) & 0xFF;
+    core->registers.sedectets.SP += 2;
 }
-static void ldff00bytea(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) { 
+static void ldhna(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Write A to memory[0xFF00 + n]
+    Memory_write(core->memory, 0xFF00 + ((instruction >> 8) & 0xFF), core->registers.octets.A, true);
 }
-static void ldaff00byte(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldhan(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Write memory[0xFF00 + n] to A
+    core->registers.octets.A = Memory_read(core->memory, 0xFF00 + ((instruction >> 8) & 0xFF)) & 0xFF;
 }
 static void ldhlsp(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+
 }
 static void addsp(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
 }
 static void jphl(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    core->registers.sedectets.PC = core->registers.sedectets.HL;
 }
 static void reti(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
 }
 static void ldsphl(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Puts HL into SP (Don't ask. Please.)
+    core->registers.sedectets.SP = core->registers.sedectets.HL;
+}
+static void ldhl(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    //Puts SP+n in to HL (I'm starting to think maybe this wasn't such a good idea)
+    word original = core->registers.sedectets.SP;
+    core->registers.sedectets.HL = core->registers.sedectets.SP + SIGN_EXTEND((instruction >> 8) & 0xFF);
+
+    if ((core->registers.sedectets.HL & 0xFF) < (original & 0xFF)) {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    } else {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    }
+
+    if (core->registers.sedectets.HL < original) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, Z_FLAG);
+}
+static void adc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    word original = core->registers.sedectets.SP;
+    core->registers.octets.A += (rTable(core, z)[0] + TEST_BIT(core->registers.octets.F, C_FLAG));
+
+    if ((core->registers.octets.A & 0xF) < (original & 0xF)) {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    } else {
+        SET_BIT(core->registers.octets.F, H_FLAG);
+    }
+
+    if (core->registers.octets.A < original) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    
+    if (!core->registers.octets.A) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
 }
 
 static void jpc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
@@ -370,6 +579,8 @@ static void callc(struct Core* core, uint32 instruction, byte x, byte y, byte z,
 }
 
 static void push(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    core->registers.sedectets.SP -= 2;
+    Memory_write(core->memory, core->registers.sedectets.SP, *rp2Table(core, p), true);
 }
 
 static void call(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
@@ -395,73 +606,40 @@ static void cpi(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
 static void rst(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
 }
 
-/*
-    nop_0, ldi16_1, ild_2, inc16_3, inc8_4, dec8_5, ldi8_6, rlca_7
-    ldsp_8, add16_9, ild_a, dec16_b, inc8_c, dec8_d, ldi8_e, rrca_f
-    stop_10, ldi16_11, ild_12, inc16_13, inc8_14, dec8_15, ldi8_16, rla_17
-    jr_18, add16_19, ild_1a, dec16_1b, inc8_1c, dec8_1d, ldi8_1e, rra_1f
-    jrc_20, ldi16_21, ildm_22, inc16_23, inc8_24, dec8_25, ldi8_26, daa_27
-    jrc_28, add16_29, ildm_2a, dec16_2b, inc8_2c, dec8_2d, ldi8_2e, cpl_2f
-    jrc_30, ldi16_31, ildm_32, inc16_33, inc8_34, dec8_35, ldi8_36, scf_37
-    jrc_38, add16_39, ildm_3a, dec16_3b, inc8_3c, dec8_3d, ldi8_3e, ccf_3f
-    ld_40, ld_41, ld_42, ld_43, ld_44, ld_45, ld_46, ld_47
-    ld_48, ld_49, ld_4a, ld_4b, ld_4c, ld_4d, ld_4e, ld_4f
-    ld_50, ld_51, ld_52, ld_53, ld_54, ld_55, ld_56, ld_57
-    ld_58, ld_59, ld_5a, ld_5b, ld_5c, ld_5d, ld_5e, ld_5f
-    ld_60, ld_61, ld_62, ld_63, ld_64, ld_65, ld_66, ld_67
-    ld_68, ld_69, ld_6a, ld_6b, ld_6c, ld_6d, ld_6e, ld_6f
-    ld_70, ld_71, ld_72, ld_73, ld_74, ld_75, halt_76, ld_77
-    ld_78, ld_79, ld_7a, ld_7b, ld_7c, ld_7d, ld_7e, ld_7f
-    add_80, add_81, add_82, add_83, add_84, add_85, add_86, add_87
-    adc_88, adc_89, adc_8a, adc_8b, adc_8c, adc_8d, adc_8e, adc_8f
-    sub_90, sub_91, sub_92, sub_93, sub_94, sub_95, sub_96, sub_97
-    sbc_98, sbc_99, sbc_9a, sbc_9b, sbc_9c, sbc_9d, sbc_9e, sbc_9f
-    and_a0, and_a1, and_a2, and_a3, and_a4, and_a5, and_a6, and_a7
-    xor_a8, xor_a9, xor_aa, xor_ab, xor_ac, xor_ad, xor_ae, xor_af
-    or_b0, or_b1, or_b2, or_b3, or_b4, or_b5, or_b6, or_b7
-    cp_b8, cp_b9, cp_ba, cp_bb, cp_bc, cp_bd, cp_be, cp_bf
-    ret_c0, pop_c1, jpc_c2, jp_c3, callc_c4, push_c5, addi_c6, rst_c7
-    ret_c8, ret_c9, jpc_ca, cb_cb, callc_cc, call_cd, adci_ce, rst_cf
-    ret_d0, pop_d1, jpc_d2, nop_d3, callc_d4, push_d5, subi_d6, rst_d7
-    ret_d8, reti_d9, jpc_da, nop_db, callc_dc, nop_dd, sbci_de, rst_df
-    ret_e0, pop_e1, ldff00ca_e2, nop_e3, nop_e4, push_e5, andi_e6, rst_e7
-    ret_e8, jphl_e9, ldwa_ea, nop_eb, nop_ec, nop_ed, xori_ee, rst_ef
-    ret_f0, pop_f1, nop_f2, di_f3, nop_f4, push_f5, ori_f6, rst_f7
-    ret_f8, ldsphl_f9, ldaw_fa, ei_fb, nop_fc, nop_fd, cpi_fe, rst_ff
-*/
 void (*execute[])(struct Core*, uint32, byte, byte, byte, byte, byte) = {
-    nop, ldi16, ild, inc16, inc8, dec8, ldi8, rlca, 
-    ldsp, add16, ild, dec16, inc8, dec8, ldi8, rrca, 
-    stop, ldi16, ild, inc16, inc8, dec8, ldi8, rla, 
-    jr, add16, ild, dec16, inc8, dec8, ldi8, rra, 
-    jrc, ldi16, ildm, inc16, inc8, dec8, ldi8, daa, 
-    jrc, add16, ildm, dec16, inc8, dec8, ldi8, cpl, 
-    jrc, ldi16, ildm, inc16, inc8, dec8, ldi8, scf, 
-    jrc, add16, ildm, dec16, inc8, dec8, ldi8, ccf, 
-    ld, ld, ld, ld, ld, ld, ld, ld, 
-    ld, ld, ld, ld, ld, ld, ld, ld, 
-    ld, ld, ld, ld, ld, ld, ld, ld, 
-    ld, ld, ld, ld, ld, ld, ld, ld, 
-    ld, ld, ld, ld, ld, ld, ld, ld, 
-    ld, ld, ld, ld, ld, ld, ld, ld, 
-    ld, ld, ld, ld, ld, ld, halt, ld, 
-    ld, ld, ld, ld, ld, ld, ld, ld, 
-    add, add, add, add, add, add, add, add, 
-    adc, adc, adc, adc, adc, adc, adc, adc, 
-    sub, sub, sub, sub, sub, sub, sub, sub, 
-    sbc, sbc, sbc, sbc, sbc, sbc, sbc, sbc, 
-    and, and, and, and, and, and, and, and, 
-    xor, xor, xor, xor, xor, xor, xor, xor, 
-    or, or, or, or, or, or, or, or, 
-    cp, cp, cp, cp, cp, cp, cp, cp, 
-    ret, pop, jpc, jp, callc, push, addi, rst, 
-    ret, ret, jpc, cb, callc, call, adci, rst, 
-    ret, pop, jpc, nop, callc, push, subi, rst, 
-    ret, reti, jpc, nop, callc, nop, sbci, rst, 
-    ret, pop, ldff00ca, nop, nop, push, andi, rst, 
-    ret, jphl, ldwa, nop, nop, nop, xori, rst, 
-    ret, pop, nop, di, nop, push, ori, rst, 
-    ret, ldsphl, ldaw, ei, nop, nop, cpi, rst
+    nop /*0*/, ldi16 /*1*/, ild /*2*/, inc16 /*3*/, inc8 /*4*/, dec8 /*5*/, ldi8 /*6*/, rlca /*7*/, 
+    ldsp /*8*/, add16 /*9*/, ild /*a*/, dec16 /*b*/, inc8 /*c*/, dec8 /*d*/, ldi8 /*e*/, rrca /*f*/, 
+    stop /*10*/, ldi16 /*11*/, ild /*12*/, inc16 /*13*/, inc8 /*14*/, dec8 /*15*/, ldi8 /*16*/, rla /*17*/, 
+    jr /*18*/, add16 /*19*/, ild /*1a*/, dec16 /*1b*/, inc8 /*1c*/, dec8 /*1d*/, ldi8 /*1e*/, rra /*1f*/, 
+    jrc /*20*/, ldi16 /*21*/, ildm /*22*/, inc16 /*23*/, inc8 /*24*/, dec8 /*25*/, ldi8 /*26*/, daa /*27*/, 
+    jrc /*28*/, add16 /*29*/, ildm /*2a*/, dec16 /*2b*/, inc8 /*2c*/, dec8 /*2d*/, ldi8 /*2e*/, cpl /*2f*/, 
+    jrc /*30*/, ldi16 /*31*/, ildm /*32*/, inc16 /*33*/, inc8 /*34*/, dec8 /*35*/, ldi8 /*36*/, scf /*37*/, 
+    jrc /*38*/, add16 /*39*/, ildm /*3a*/, dec16 /*3b*/, inc8 /*3c*/, dec8 /*3d*/, ldi8 /*3e*/, ccf /*3f*/, 
+    ld /*40*/, ld /*41*/, ld /*42*/, ld /*43*/, ld /*44*/, ld /*45*/, ld /*46*/, ld /*47*/, 
+    ld /*48*/, ld /*49*/, ld /*4a*/, ld /*4b*/, ld /*4c*/, ld /*4d*/, ld /*4e*/, ld /*4f*/, 
+    ld /*50*/, ld /*51*/, ld /*52*/, ld /*53*/, ld /*54*/, ld /*55*/, ld /*56*/, ld /*57*/, 
+    ld /*58*/, ld /*59*/, ld /*5a*/, ld /*5b*/, ld /*5c*/, ld /*5d*/, ld /*5e*/, ld /*5f*/, 
+    ld /*60*/, ld /*61*/, ld /*62*/, ld /*63*/, ld /*64*/, ld /*65*/, ld /*66*/, ld /*67*/, 
+    ld /*68*/, ld /*69*/, ld /*6a*/, ld /*6b*/, ld /*6c*/, ld /*6d*/, ld /*6e*/, ld /*6f*/, 
+    ld /*70*/, ld /*71*/, ld /*72*/, ld /*73*/, ld /*74*/, ld /*75*/, halt /*76*/, ld /*77*/, 
+    ld /*78*/, ld /*79*/, ld /*7a*/, ld /*7b*/, ld /*7c*/, ld /*7d*/, ld /*7e*/, ld /*7f*/, 
+    add /*80*/, add /*81*/, add /*82*/, add /*83*/, add /*84*/, add /*85*/, add /*86*/, add /*87*/, 
+    adc /*88*/, adc /*89*/, adc /*8a*/, adc /*8b*/, adc /*8c*/, adc /*8d*/, adc /*8e*/, adc /*8f*/, 
+    sub /*90*/, sub /*91*/, sub /*92*/, sub /*93*/, sub /*94*/, sub /*95*/, sub /*96*/, sub /*97*/, 
+    sbc /*98*/, sbc /*99*/, sbc /*9a*/, sbc /*9b*/, sbc /*9c*/, sbc /*9d*/, sbc /*9e*/, sbc /*9f*/, 
+    and /*a0*/, and /*a1*/, and /*a2*/, and /*a3*/, and /*a4*/, and /*a5*/, and /*a6*/, and /*a7*/, 
+    xor /*a8*/, xor /*a9*/, xor /*aa*/, xor /*ab*/, xor /*ac*/, xor /*ad*/, xor /*ae*/, xor /*af*/, 
+    or /*b0*/, or /*b1*/, or /*b2*/, or /*b3*/, or /*b4*/, or /*b5*/, or /*b6*/, or /*b7*/, 
+    cp /*b8*/, cp /*b9*/, cp /*ba*/, cp /*bb*/, cp /*bc*/, cp /*bd*/, cp /*be*/, cp /*bf*/, 
+    retcc /*c0*/, pop /*c1*/, jpc /*c2*/, jp /*c3*/, callc /*c4*/, push /*c5*/, addi /*c6*/, rst /*c7*/, 
+    retcc /*c8*/, ret /*c9*/, jpc /*ca*/, cb /*cb*/, callc /*cc*/, call /*cd*/, adci /*ce*/, rst /*cf*/, 
+    retcc /*d0*/, pop /*d1*/, jpc /*d2*/, nop /*d3*/, callc /*d4*/, push /*d5*/, subi /*d6*/, rst /*d7*/, 
+    retcc /*d8*/, reti /*d9*/, jpc /*da*/, nop /*db*/, callc /*dc*/, nop /*dd*/, sbci /*de*/, rst /*df*/, 
+    ldhna /*e0*/, pop /*e1*/, ldff00ca /*e2*/, nop /*e3*/, nop /*e4*/, push /*e5*/, andi /*e6*/, rst /*e7*/, 
+    ret /*e8*/, jphl /*e9*/, ldwa /*ea*/, nop /*eb*/, nop /*ec*/, nop /*ed*/, xori /*ee*/, rst /*ef*/, 
+    ldhan /*f0*/, pop /*f1*/, nop /*f2*/, di /*f3*/, nop /*f4*/, push /*f5*/, ori /*f6*/, rst /*f7*/, 
+    ldhl /*f8*/, ldsphl /*f9*/, ldaw /*fa*/, ei /*fb*/, nop /*fc*/, nop /*fd*/, cpi /*fe*/, rst /*ff*/
+
 };
 
 void Core_initialize(struct Core* core) {

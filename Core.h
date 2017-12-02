@@ -18,17 +18,20 @@ struct Core {
         } octets;
 
         struct {
-            short AF;
-            short BC;
-            short DE;
-            short HL;
-            short SP;
-            short PC;
+            word AF;
+            word BC;
+            word DE;
+            word HL;
+            word SP;
+            word PC;
         } sedectets;
+
+        word octetArray[12];
+        word sedectetArray[6];
     } registers;
 
-    short* rpTable;
-    short* rTable;
+    word* rpTable;
+    word* rTable;
 
     struct Memory *memory;
 };

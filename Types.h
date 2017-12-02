@@ -7,15 +7,17 @@
 #include <stdbool.h>
 
 #define bit unsigned char // I'm already sorry
-#define byte unsigned char
 #define half unsigned char //I'M REALLY SORRY
-#define word unsigned short
+#define byte uint8_t
+#define word uint16_t
 #define uint32 uint32_t
 #define displacement char
 
 #define SET_BIT(i, j) do { i = i | (1 << j); } while (0)
 #define RESET_BIT(i, j) do { i = i & ~(1 << j); } while (0)
 #define TEST_BIT(i, j)  ((i >> j) & 1)
+
+#define SIGN_EXTEND(i) (word)(int16_t)(int8_t)(i)
 
 #define C_FLAG 4
 #define H_FLAG 5
