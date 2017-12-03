@@ -1,0 +1,122 @@
+[File generated automatically on Sun Dec  3 00:29:34 UTC 2017 with commit]
+Core.c performance static analyzer
+
+Analyzing at optimization level 0...
+
+       nop:  17
+     ldi16:  27
+       ild: 123
+     inc16:  23
+      inc8:  24
+      dec8:  24
+      ldi8:  30
+      rlca:  61
+    ldnnsp:  30
+     add16:  62
+     dec16:  23
+      rrca:  62
+      stop:  17
+       rla:  63
+        jr:  27
+       rra:  63
+       jrc: 106
+      ildm:  53
+       daa:  80
+       cpl:  28
+       scf:  28
+       ccf:  39
+        ld:  28
+      halt:  17
+       add:  86
+       adc:  90
+       sub:  86
+       sbc:  90
+       and:  60
+       xor:  51
+        or:  60
+        cp:  82
+     retcc:  95
+       pop:  34
+       jpc: 106
+        jp:  24
+     callc: 106
+      push:  33
+       rst:  32
+       ret:  29
+        cb:  30
+      call:  36
+      reti:  28
+     ldhna:  31
+      ldca:  28
+      jphl:  19
+      ldwa:  30
+     ldhan:  34
+      ldac:  27
+        di:  19
+   ldhlspn:  65
+    ldsphl:  19
+      ldaw:  30
+        ei:  19
+
+O0 average: 113.92592592592592
+
+
+Analyzing at optimization level ...
+
+       nop:   7
+     ldi16:  14
+       ild:  96
+     inc16:  12
+      inc8:  39
+      dec8:  39
+      ldi8:  42
+      rlca:  29
+    ldnnsp:  19
+     add16:  25
+     dec16:  12
+      rrca:  30
+      stop:   7
+       rla:  30
+        jr:  14
+       rra:  32
+       jrc:  68
+      ildm:  48
+       daa:  43
+       cpl:  13
+       scf:  11
+       ccf:  17
+        ld:  73
+      halt:   7
+       add:  74
+       adc:  78
+       sub:  76
+       sbc:  79
+       and:  68
+       xor:  52
+        or:  66
+        cp:  77
+     retcc:  90
+       pop:  26
+       jpc:  49
+        jp:   9
+     callc: 100
+      push:  21
+       rst:  25
+       ret:  20
+        cb:  10
+      call:  28
+      reti:  20
+     ldhna:  22
+      ldca:  17
+      jphl:   9
+      ldwa:  19
+     ldhan:  23
+      ldac:  18
+        di:   9
+   ldhlspn:  29
+    ldsphl:   9
+      ldaw:  20
+        ei:   9
+
+O average: 84.7962962962963
+

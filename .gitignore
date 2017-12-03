@@ -4,3 +4,6 @@
 /*.xcodeproj
 *.gb
 *.tcc
+
+*.ll
+*.s

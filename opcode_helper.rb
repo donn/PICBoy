@@ -1,3 +1,5 @@
+# Assisting tool
+
 class Integer
     def x
         return self >> 6
@@ -20,8 +22,4 @@ class Integer
     end
 end
 
-for i in 0..255
-     if i.x == 3 && i.z == 6
-         puts i.hex
-    end
-end
+puts 0x10.x, 0x10.y, 0x10.z

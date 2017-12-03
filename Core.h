@@ -33,10 +33,14 @@ struct Core {
     bool propagateEnableInterrupts, propagateDisableInterrupts;
     bool interrupts;
 
+    //We need to cull all the stack garbage from function calls
+    uint32 instruction;
+    byte x, y, z, p, q;
+
     struct Memory *memory;
 };
 
 void Core_initialize(struct Core* core);
-void Core_machineCycle(struct Core* core);
+void Core_cycle(struct Core* core);
 
 #endif

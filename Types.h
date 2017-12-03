@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define bit unsigned char // I'm already sorry
-#define half unsigned char //I'M REALLY SORRY
+#define bit uint8_t// I'm already sorry
+#define nibble uint8_t //I'M REALLY SORRY
 #define byte uint8_t
 #define word uint16_t
 #define uint32 uint32_t

@@ -28,6 +28,40 @@ static byte* rTable(struct Core* core, byte y) {
 //CB-prefixed Instructions
 
 static void cb(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+    core->registers.sedectets.PC += 1;
+    byte opcode = (instruction >> 8) & 0xFF;
+
+    if (opcode >= 0x40) {
+        nibble top = opcode >> 6;
+        if (top == 0x3) {
+            //SET
+        } else if (top == 0x2) {
+            //RESET
+        } else { //if (top == 0x1) {
+            //BIT
+        } // else would be an impossible outcome, anything else is less than 0x40
+    } else {
+        switch (opcode & 0xF8) {
+            case 0x38:
+                //SRL n
+            case 0x30:
+                //SWAP
+            case 0x28:
+                //SRA n
+            case 0x20:
+                //SLA n
+            case 0x18:
+                //RR n
+            case 0x10:
+                //RL n
+            case 0x08:
+                //RRC n
+            case 0x00:
+                //RLC n
+            default:
+                ;//NOP
+        }
+    }
 }
 
 //Regular Instructions
@@ -361,7 +395,7 @@ static void adc(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
         target = (instruction >> 8) & 0xFF;
     }
     byte original = core->registers.octets.A;
-    core->registers.octets.A += target + TEST_BIT(core->registers.octets.F, C_FLAG));
+    core->registers.octets.A += target + TEST_BIT(core->registers.octets.F, C_FLAG);
 
     if ((core->registers.octets.A & 0xF) < (original & 0xF)) {
         SET_BIT(core->registers.octets.F, H_FLAG);
@@ -419,7 +453,7 @@ static void sbc(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
         target = (instruction >> 8) & 0xFF;
     }
     byte original = core->registers.octets.A;
-    core->registers.octets.A -= target + TEST_BIT(core->registers.octets.F, C_FLAG));
+    core->registers.octets.A -= target + TEST_BIT(core->registers.octets.F, C_FLAG);
 
     if ((core->registers.octets.A & 0xF) > (original & 0xF)) {
         SET_BIT(core->registers.octets.F, H_FLAG);
@@ -761,7 +795,6 @@ void (*execute[])(struct Core*, uint32, byte, byte, byte, byte, byte) = {
     ret /*e8*/, jphl /*e9*/, ldwa /*ea*/, nop /*eb*/, nop /*ec*/, nop /*ed*/, xor /*ee*/, rst /*ef*/, 
     ldhan /*f0*/, pop /*f1*/, ldac /*f2*/, di /*f3*/, nop /*f4*/, push /*f5*/, or /*f6*/, rst /*f7*/, 
     ldhlspn /*f8*/, ldsphl /*f9*/, ldaw /*fa*/, ei /*fb*/, nop /*fc*/, nop /*fd*/, cp /*fe*/, rst /*ff*/
-
 };
 
 void Core_initialize(struct Core* core) {
@@ -769,7 +802,7 @@ void Core_initialize(struct Core* core) {
     core->interrupts = true;
 }
 
-void Core_machineCycle(struct Core* core) {
+void Core_cycle(struct Core* core) {
     //Handle interrupts here
 
     if (core->propagateEnableInterrupts) {
