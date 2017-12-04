@@ -2,7 +2,15 @@
 #include "Core.h"
 #include "Memory.h"
 
-static byte* rTable(struct Core* core, byte y) {
+static struct Core* core; 
+
+#define FIELD_X ((core->opcode >> 6))
+#define FIELD_Y ((core->opcode >> 3) &  7)
+#define FIELD_Z ((core->opcode     ) &  7)
+#define FIELD_P ((core->opcode >> 3) >> 1)
+#define FIELD_Q ((core->opcode >> 3) &  1)
+
+static byte* rTable(byte y) {
     switch (y) {
         case 7:
             return &core->registers.octets.A;
@@ -22,14 +30,14 @@ static byte* rTable(struct Core* core, byte y) {
             return &core->registers.octets.B;
     }
 }
-#define rpTable(core, p)  &core->registers.sedectetArray[y + 1]
-#define rp2Table(core, p) &core->registers.sedectetArray[(y + 1) % 4]
+#define rpTable(p)  &core->registers.sedectetArray[p + 1]
+#define rp2Table(p) &core->registers.sedectetArray[(p + 1) % 4]
 
 //CB-prefixed Instructions
 
-static void cb(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void cb() {
     core->registers.sedectets.PC += 1;
-    byte opcode = (instruction >> 8) & 0xFF;
+    byte opcode = (core->instruction >> 8) & 0xFF;
 
     if (opcode >= 0x40) {
         nibble top = opcode >> 6;
@@ -66,32 +74,32 @@ static void cb(struct Core* core, uint32 instruction, byte x, byte y, byte z, by
 
 //Regular Instructions
 
-static void jr(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void jr() {
     //Jump relatively
     core->registers.sedectets.PC += 1;
-    core->registers.sedectets.PC += SIGN_EXTEND((instruction >> 8) & 0xFF);
+    core->registers.sedectets.PC += SIGN_EXTEND((core->instruction >> 8) & 0xFF);
 }
-static void jrc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void jrc() {
     //Conditional return
-    switch (y) { 
+    switch (FIELD_Y) { 
         case 3:
             if (TEST_BIT(core->registers.octets.F, C_FLAG)) {
-                jr(core, instruction, x, y, z, p, q);
+                jr();
                 return;
             }
         case 2:
             if (!TEST_BIT(core->registers.octets.F, C_FLAG)) {
-                jr(core, instruction, x, y, z, p, q);
+                jr();
                 return;
             }
         case 1:
             if (TEST_BIT(core->registers.octets.F, Z_FLAG)) {
-                jr(core, instruction, x, y, z, p, q);
+                jr();
                 return;
             }
         default: 
             if (!TEST_BIT(core->registers.octets.F, Z_FLAG)) {
-                jr(core, instruction, x, y, z, p, q);
+                jr();
                 return;
             }
     }
@@ -99,27 +107,27 @@ static void jrc(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
     
 }
 
-static void stop(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void stop() {
 }
-static void ldnnsp(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldnnsp() {
     //Load sp into memory[nn]
     core->registers.sedectets.PC += 2;
-    Memory_write(core->memory, (instruction >> 8) & 0xFFFF, core->registers.sedectets.SP, false);
+    Memory_write(core->memory, (core->instruction >> 8) & 0xFFFF, core->registers.sedectets.SP, false);
 }
-static void nop(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void nop() {
     //No operation
 }
 
-static void ldi16(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldi16() {
     //Load following immediate into register pair
     core->registers.sedectets.PC += 2;
-    *rpTable(core, p) = (instruction >> 8) & 0xFFFF;
+    *rpTable(FIELD_P) = (core->instruction >> 8) & 0xFFFF;
 
 }
-static void add16(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void add16() {
     //Add register pair to HL
     word original = core->registers.sedectets.HL;
-    core->registers.sedectets.HL += *rpTable(core, p);
+    core->registers.sedectets.HL += *rpTable(FIELD_P);
 
     if ((core->registers.sedectets.HL & 0xFFF) < (original & 0xFFF)) {
         SET_BIT(core->registers.octets.F, H_FLAG);
@@ -136,11 +144,11 @@ static void add16(struct Core* core, uint32 instruction, byte x, byte y, byte z,
     RESET_BIT(core->registers.octets.F, N_FLAG);
 }
 
-static void ild(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ild() {
     //Indirect loading
     //(It's complicated)
-    if (q) {
-        switch (p) {
+    if (FIELD_Q) {
+        switch (FIELD_P) {
             case 0:
                 Memory_write(core->memory, core->registers.sedectets.BC, core->registers.octets.A, true);
                 break;
@@ -149,15 +157,15 @@ static void ild(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
                 break;
             case 2:
                 core->registers.sedectets.PC += 2;
-                Memory_write(core->memory, (instruction >> 8) & 0xFFFF, core->registers.sedectets.HL, false);
+                Memory_write(core->memory, (core->instruction >> 8) & 0xFFFF, core->registers.sedectets.HL, false);
                 break;
             default:
                 core->registers.sedectets.PC += 2;
-                Memory_write(core->memory, (instruction >> 8) & 0xFFFF, core->registers.octets.A, true);
+                Memory_write(core->memory, (core->instruction >> 8) & 0xFFFF, core->registers.octets.A, true);
         }
 
     } else {
-        switch (p) {
+        switch (FIELD_P) {
             case 0:
                 core->registers.octets.A = Memory_read(core->memory, core->registers.sedectets.BC) & 0xFF;
                 break;
@@ -166,53 +174,53 @@ static void ild(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
                 break;
             case 2:
                 core->registers.sedectets.PC += 2;
-                core->registers.sedectets.HL = Memory_read(core->memory, (instruction >> 8) & 0xFFFF) & 0xFFFF;
+                core->registers.sedectets.HL = Memory_read(core->memory, (core->instruction >> 8) & 0xFFFF) & 0xFFFF;
                 break;
             default:
                 core->registers.sedectets.PC += 2;
-                core->registers.octets.A = Memory_read(core->memory, (instruction >> 8) & 0xFFFF) & 0xFF;
+                core->registers.octets.A = Memory_read(core->memory, (core->instruction >> 8) & 0xFFFF) & 0xFF;
         }
     }
 }
-static void ildm(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ildm() {
     //p = 0: save at [HL], p = 1: save at A
     //q = 2: increment HL, q = 3: decrement HL
-    byte* target = rTable(core, 6 + p);
-    int hlchange = (q == 3)? -1: 1;
-    if (p) {
+    byte* target = rTable(6 + FIELD_P);
+    int hlchange = (FIELD_Q == 3)? -1: 1;
+    if (FIELD_P) {
         core->registers.octets.A = Memory_read(core->memory, core->registers.sedectets.HL) & 0xFF;
     } else {
         Memory_write(core->memory, core->registers.sedectets.HL, core->registers.octets.A, true);
     }
     core->registers.sedectets.HL += hlchange;
 }
-static void inc16(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void inc16() {
     //Increment register pair
-    (*rpTable(core, p))++;
+    (*rpTable(FIELD_P))++;
 }
-static void dec16(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void dec16() {
     //Decrement register pair
-    (*rpTable(core, p))--;
+    (*rpTable(FIELD_P))--;
 }
 
-static void inc8(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void inc8() {
     //Increment register
-    (*rTable(core, y))++;
+    (*rTable(FIELD_Y))++;
 }
 
-static void dec8(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void dec8() {
     //Decrement register
-    (*rTable(core, y))--;
+    (*rTable(FIELD_Y))--;
 }
 
-static void ldi8(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldi8() {
     //Load immediate
     core->registers.sedectets.PC += 1;
-    (*rTable(core, y)) = (instruction >> 8) & 0xFF;
+    (*rTable(FIELD_Y)) = (core->instruction >> 8) & 0xFF;
 }
 
 //ZNHC0000
-static void rlca(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void rlca() {
     //Rotate left, old bit 7 set to carry and new bit 0
     bit last = core->registers.octets.A >> 7;
     core->registers.octets.A <<= 1;
@@ -233,7 +241,7 @@ static void rlca(struct Core* core, uint32 instruction, byte x, byte y, byte z, 
     RESET_BIT(core->registers.octets.F, N_FLAG);
     RESET_BIT(core->registers.octets.F, H_FLAG);
 }
-static void rrca(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void rrca() {
     //Rotate right, old bit 0 set to carry and new bit 7
     bit first = core->registers.octets.A & 1;
     core->registers.octets.A >>= 1;
@@ -254,7 +262,7 @@ static void rrca(struct Core* core, uint32 instruction, byte x, byte y, byte z, 
     RESET_BIT(core->registers.octets.F, N_FLAG);
     RESET_BIT(core->registers.octets.F, H_FLAG);
 }
-static void rla(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void rla() {
 //Rotate left, old bit 7 set to carry and new bit 0
     bit last = core->registers.octets.A >> 7;
     core->registers.octets.A <<= 1;
@@ -275,7 +283,7 @@ static void rla(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
     RESET_BIT(core->registers.octets.F, N_FLAG);
     RESET_BIT(core->registers.octets.F, H_FLAG);
 }
-static void rra(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void rra() {
     //Rotate right, old bit 0 set to carry and new bit 7
     bit first = core->registers.octets.A & 1;
     core->registers.octets.A >>= 1;
@@ -296,7 +304,7 @@ static void rra(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
     RESET_BIT(core->registers.octets.F, N_FLAG);
     RESET_BIT(core->registers.octets.F, H_FLAG);
 }
-static void daa(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void daa() {
     //Binary coded decimal adjust accumulator
     byte units = core->registers.octets.A % 10;
     byte tens  = core->registers.octets.A / 10;
@@ -322,21 +330,21 @@ static void daa(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
 
     RESET_BIT(core->registers.octets.F, H_FLAG);
 }
-static void cpl(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void cpl() {
     
     core->registers.octets.A = ~core->registers.octets.A;
     //Complement accumulator
     SET_BIT(core->registers.octets.F, N_FLAG);
     SET_BIT(core->registers.octets.F, H_FLAG);
 }
-static void scf(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void scf() {
     //Set carry flag (I can now see why people appreciate RISC)
     SET_BIT(core->registers.octets.F, C_FLAG);
 
     RESET_BIT(core->registers.octets.F, N_FLAG);
     RESET_BIT(core->registers.octets.F, H_FLAG);
 }
-static void ccf(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ccf() {
     //Complement carry flag
     if (TEST_BIT(core->registers.octets.F, C_FLAG)) {
         RESET_BIT(core->registers.octets.F, C_FLAG);
@@ -349,21 +357,21 @@ static void ccf(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
 }
 
 
-static void ld(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ld() {
     //Load (i.e. move)
-    (*rTable(core, y)) = (*rTable(core, z));
+    (*rTable(FIELD_Y)) = (*rTable(FIELD_Z));
 }
 
-static void halt(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void halt() {
     //Catch fire or something idfk
 }
 
 
-static void add(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void add() {
     //Add register to accumulator
-    byte target = (*rTable(core, z));
-    if (x == 3) {
-        target = (instruction >> 8) & 0xFF;
+    byte target = (*rTable(FIELD_Z));
+    if (FIELD_X == 3) {
+        target = (core->instruction >> 8) & 0xFF;
     }
     byte original = core->registers.octets.A;
     core->registers.octets.A += target;
@@ -388,11 +396,11 @@ static void add(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
         RESET_BIT(core->registers.octets.F, Z_FLAG);
     }
 }
-static void adc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void adc() {
     //Add register plus carry to accumulator
-    byte target = (*rTable(core, z));
-    if (x == 3) {
-        target = (instruction >> 8) & 0xFF;
+    byte target = (*rTable(FIELD_Z));
+    if (FIELD_X == 3) {
+        target = (core->instruction >> 8) & 0xFF;
     }
     byte original = core->registers.octets.A;
     core->registers.octets.A += target + TEST_BIT(core->registers.octets.F, C_FLAG);
@@ -417,11 +425,11 @@ static void adc(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
         RESET_BIT(core->registers.octets.F, Z_FLAG);
     }
 }
-static void sub(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void sub() {
     //Subtract register from accumulator
-    byte target = (*rTable(core, z));
-    if (x == 3) {
-        target = (instruction >> 8) & 0xFF;
+    byte target = (*rTable(FIELD_Z));
+    if (FIELD_X == 3) {
+        target = (core->instruction >> 8) & 0xFF;
     }
     byte original = core->registers.octets.A;
     core->registers.octets.A -= target;
@@ -446,11 +454,11 @@ static void sub(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
         RESET_BIT(core->registers.octets.F, Z_FLAG);
     }
 }
-static void sbc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void sbc() {
     //Subtract register + carry from accumulator
-    byte target = (*rTable(core, z));
-    if (x == 3) {
-        target = (instruction >> 8) & 0xFF;
+    byte target = (*rTable(FIELD_Z));
+    if (FIELD_X == 3) {
+        target = (core->instruction >> 8) & 0xFF;
     }
     byte original = core->registers.octets.A;
     core->registers.octets.A -= target + TEST_BIT(core->registers.octets.F, C_FLAG);
@@ -475,11 +483,11 @@ static void sbc(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
         RESET_BIT(core->registers.octets.F, Z_FLAG);
     }
 }
-static void and(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void and() {
     //Logically and register with accumulator
-    byte target = (*rTable(core, z));
-    if (x == 3) {
-        target = (instruction >> 8) & 0xFF;
+    byte target = (*rTable(FIELD_Z));
+    if (FIELD_X == 3) {
+        target = (core->instruction >> 8) & 0xFF;
     }
     core->registers.octets.A &= target;
 
@@ -494,9 +502,9 @@ static void and(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
         RESET_BIT(core->registers.octets.F, Z_FLAG);
     }
 }
-static void xor(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void xor() {
     //Logically xor register with accumulator
-    core->registers.octets.A ^= (*rTable(core, z));
+    core->registers.octets.A ^= (*rTable(FIELD_Z));
 
     RESET_BIT(core->registers.octets.F, H_FLAG);
     RESET_BIT(core->registers.octets.F, C_FLAG);
@@ -509,11 +517,11 @@ static void xor(struct Core* core, uint32 instruction, byte x, byte y, byte z, b
         RESET_BIT(core->registers.octets.F, Z_FLAG);
     }
 }
-static void or(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void or() {
     //Logically or register with accumulator
-    byte target = (*rTable(core, z));
-    if (x == 3) {
-        target = (instruction >> 8) & 0xFF;
+    byte target = (*rTable(FIELD_Z));
+    if (FIELD_X == 3) {
+        target = (core->instruction >> 8) & 0xFF;
     }
     core->registers.octets.A |= target;
 
@@ -528,11 +536,11 @@ static void or(struct Core* core, uint32 instruction, byte x, byte y, byte z, by
         RESET_BIT(core->registers.octets.F, Z_FLAG);
     }
 }
-static void cp(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void cp() {
     //Compare register with accumulator (basically sub but the result is thrown away)
-    byte target = (*rTable(core, z));
-    if (x == 3) {
-        target = (instruction >> 8) & 0xFF;
+    byte target = (*rTable(FIELD_Z));
+    if (FIELD_X == 3) {
+        target = (core->instruction >> 8) & 0xFF;
     }
     byte new = core->registers.octets.A - target;
 
@@ -558,58 +566,58 @@ static void cp(struct Core* core, uint32 instruction, byte x, byte y, byte z, by
 }
 
 
-static void ret(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ret() {
     //Pop from stack, jump
     core->registers.sedectets.PC = Memory_read(core->memory, core->registers.sedectets.SP) & 0xFFFF;
     core->registers.sedectets.SP += 2;
 }
 
-static void retcc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void retcc() {
     //Conditional return
-    switch (y) {
+    switch (FIELD_Y) {
         case 3:
             if (TEST_BIT(core->registers.octets.F, C_FLAG)) {
-                ret(core, instruction, x, y, z, p, q);
+                ret();
             }
         case 2:
             if (!TEST_BIT(core->registers.octets.F, C_FLAG)) {
-                ret(core, instruction, x, y, z, p, q);
+                ret();
             }
         case 1:
             if (TEST_BIT(core->registers.octets.F, Z_FLAG)) {
-                ret(core, instruction, x, y, z, p, q);
+                ret();
             }
         default: 
             if (!TEST_BIT(core->registers.octets.F, Z_FLAG)) {
-                ret(core, instruction, x, y, z, p, q);
+                ret();
             }
     }
 }
-static void reti(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void reti() {
     //Return and enable interrupts
-    ret(core, instruction, x, y, z, p, q);
+    ret();
 }
 
-static void pop(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void pop() {
     //Pop from stack, place in register pair
-    *rp2Table(core, p) = Memory_read(core->memory, core->registers.sedectets.SP) & 0xFFFF;
+    *rp2Table(FIELD_P) = Memory_read(core->memory, core->registers.sedectets.SP) & 0xFFFF;
     core->registers.sedectets.SP += 2;
 }
-static void ldhna(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldhna() {
     //Write A to memory[0xFF00 + n]
     core->registers.sedectets.PC += 1;
-    Memory_write(core->memory, 0xFF00 + SIGN_EXTEND((instruction >> 8) & 0xFF), core->registers.octets.A, true);
+    Memory_write(core->memory, 0xFF00 + SIGN_EXTEND((core->instruction >> 8) & 0xFF), core->registers.octets.A, true);
 }
-static void ldhan(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldhan() {
     //Write memory[0xFF00 + n] to A
     core->registers.sedectets.PC += 1;
-    core->registers.octets.A = Memory_read(core->memory, 0xFF00 + SIGN_EXTEND((instruction >> 8) & 0xFF)) & 0xFF;
+    core->registers.octets.A = Memory_read(core->memory, 0xFF00 + SIGN_EXTEND((core->instruction >> 8) & 0xFF)) & 0xFF;
 }
-static void addspn(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void addspn() {
     //Add register pair to HL
     word original = core->registers.sedectets.SP;
     core->registers.sedectets.PC += 1;
-    core->registers.sedectets.SP += SIGN_EXTEND((instruction >> 8) & 0xFF);
+    core->registers.sedectets.SP += SIGN_EXTEND((core->instruction >> 8) & 0xFF);
 
     if ((core->registers.sedectets.SP & 0xFFF) < (original & 0xFFF)) {
         SET_BIT(core->registers.octets.F, H_FLAG);
@@ -626,19 +634,19 @@ static void addspn(struct Core* core, uint32 instruction, byte x, byte y, byte z
     RESET_BIT(core->registers.octets.F, Z_FLAG);
     RESET_BIT(core->registers.octets.F, N_FLAG);
 }
-static void jphl(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void jphl() {
     //Jump to HL
     core->registers.sedectets.PC = core->registers.sedectets.HL;
 }
-static void ldsphl(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldsphl() {
     //Puts HL into SP (Don't ask. Please.)
     core->registers.sedectets.SP = core->registers.sedectets.HL;
 }
-static void ldhlspn(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldhlspn() {
     //Puts SP+n in to HL (I'm starting to think maybe this wasn't such a good idea)
     word original = core->registers.sedectets.SP;
     core->registers.sedectets.PC += 1;
-    core->registers.sedectets.HL = core->registers.sedectets.SP + SIGN_EXTEND((instruction >> 8) & 0xFF);
+    core->registers.sedectets.HL = core->registers.sedectets.SP + SIGN_EXTEND((core->instruction >> 8) & 0xFF);
 
     if ((core->registers.sedectets.HL & 0xFF) < (original & 0xFF)) {
         SET_BIT(core->registers.octets.F, H_FLAG);
@@ -657,91 +665,91 @@ static void ldhlspn(struct Core* core, uint32 instruction, byte x, byte y, byte 
 }
 
 
-static void jp(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void jp() {
     //Jump to address nn
     core->registers.sedectets.PC += 2; //Does it really matter...
-    core->registers.sedectets.PC = (instruction >> 8) & 0xFFFF;
+    core->registers.sedectets.PC = (core->instruction >> 8) & 0xFFFF;
 }
 
-static void jpc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void jpc() {
     //Conditional jump
-    switch (y) {
+    switch (FIELD_Y) {
         case 3:
             if (TEST_BIT(core->registers.octets.F, C_FLAG)) {
-                jp(core, instruction, x, y, z, p, q);
+                jp();
                 return;
             }
         case 2:
             if (!TEST_BIT(core->registers.octets.F, C_FLAG)) {
-                jp(core, instruction, x, y, z, p, q);
+                jp();
                 return;
             }
         case 1:
             if (TEST_BIT(core->registers.octets.F, Z_FLAG)) {
-                jp(core, instruction, x, y, z, p, q);
+                jp();
                 return;
             }
         default: 
             if (!TEST_BIT(core->registers.octets.F, Z_FLAG)) {
-                jp(core, instruction, x, y, z, p, q);
+                jp();
                 return;
             }
     }
     core->registers.sedectets.PC += 2; //The follower nn won't just go on its own
 }
-static void ldwa(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldwa() {
     //Write accumulator to memory[nn]
     core->registers.sedectets.PC += 2;
-    Memory_write(core->memory, (instruction >> 8) & 0xFFFF, core->registers.octets.A, true);
+    Memory_write(core->memory, (core->instruction >> 8) & 0xFFFF, core->registers.octets.A, true);
 }
-static void ldaw(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldaw() {
     //Write memory[nn] to accumulator
     core->registers.sedectets.PC += 2;
-    core->registers.octets.A = Memory_read(core->memory, (instruction >> 8) & 0xFFFF) & 0xFF;
+    core->registers.octets.A = Memory_read(core->memory, (core->instruction >> 8) & 0xFFFF) & 0xFF;
 }
-static void ldca(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldca() {
     //Write accumulator to memory[0xFF00 + C]
     Memory_write(core->memory, 0xFF00 + SIGN_EXTEND(core->registers.octets.C), core->registers.octets.A, true);
 }
-static void ldac(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ldac() {
     //Write memory[0xFF00 + C] to accumulator
     core->registers.octets.A = Memory_read(core->memory, 0xFF00 + SIGN_EXTEND(core->registers.octets.C));
 }
 
-static void push(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void push() {
     //Push on stack
     core->registers.sedectets.SP -= 2;
-    Memory_write(core->memory, core->registers.sedectets.SP, *rp2Table(core, p), true);
+    Memory_write(core->memory, core->registers.sedectets.SP, *rp2Table(FIELD_P), true);
 }
 
-static void call(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void call() {
     //Push next instruction's address to stack, jump to nn
     core->registers.sedectets.SP -= 2;
     core->registers.sedectets.PC += 2;
     Memory_write(core->memory, core->registers.sedectets.SP, core->registers.sedectets.PC, false);
-    core->registers.sedectets.PC = (instruction >> 8) & 0xFFFF;
+    core->registers.sedectets.PC = (core->instruction >> 8) & 0xFFFF;
 }
-static void callc(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void callc() {
     //Conditional call
-    switch (y) {
+    switch (FIELD_Y) {
         case 3:
             if (TEST_BIT(core->registers.octets.F, C_FLAG)) {
-                call(core, instruction, x, y, z, p, q);
+                call();
                 return;
             }
         case 2:
             if (!TEST_BIT(core->registers.octets.F, C_FLAG)) {
-                call(core, instruction, x, y, z, p, q);
+                call();
                 return;
             }
         case 1:
             if (TEST_BIT(core->registers.octets.F, Z_FLAG)) {
-                call(core, instruction, x, y, z, p, q);
+                call();
                 return;
             }
         default: 
             if (!TEST_BIT(core->registers.octets.F, Z_FLAG)) {
-                call(core, instruction, x, y, z, p, q);
+                call();
                 return;
             }
     }
@@ -749,20 +757,20 @@ static void callc(struct Core* core, uint32 instruction, byte x, byte y, byte z,
   
 }
 
-static void di(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void di() {
     core->propagateDisableInterrupts = true;
 }
-static void ei(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void ei() {
     core->propagateEnableInterrupts = true;
 }
-static void rst(struct Core* core, uint32 instruction, byte x, byte y, byte z, byte p, byte q) {
+static void rst() {
     //"Restart": Push address on stack then jump somewhere
     core->registers.sedectets.SP -= 2;
     Memory_write(core->memory, core->registers.sedectets.SP, core->registers.sedectets.PC, false);
-    core->registers.sedectets.PC = y << 3;
+    core->registers.sedectets.PC = FIELD_Y << 3;
 }
 
-void (*execute[])(struct Core*, uint32, byte, byte, byte, byte, byte) = {
+void (*execute[])() = {
     nop /*0*/, ldi16 /*1*/, ild /*2*/, inc16 /*3*/, inc8 /*4*/, dec8 /*5*/, ldi8 /*6*/, rlca /*7*/, 
     ldnnsp /*8*/, add16 /*9*/, ild /*a*/, dec16 /*b*/, inc8 /*c*/, dec8 /*d*/, ldi8 /*e*/, rrca /*f*/, 
     stop /*10*/, ldi16 /*11*/, ild /*12*/, inc16 /*13*/, inc8 /*14*/, dec8 /*15*/, ldi8 /*16*/, rla /*17*/, 
@@ -797,12 +805,12 @@ void (*execute[])(struct Core*, uint32, byte, byte, byte, byte, byte) = {
     ldhlspn /*f8*/, ldsphl /*f9*/, ldaw /*fa*/, ei /*fb*/, nop /*fc*/, nop /*fd*/, cp /*fe*/, rst /*ff*/
 };
 
-void Core_initialize(struct Core* core) {
+void Core_initialize() {
     core->registers.sedectets.PC = 0x0000;
     core->interrupts = true;
 }
 
-void Core_cycle(struct Core* core) {
+void Core_cycle() {
     //Handle interrupts here
 
     if (core->propagateEnableInterrupts) {
@@ -815,15 +823,10 @@ void Core_cycle(struct Core* core) {
         core->interrupts = false;
     }
 
-    uint32 instruction = Memory_read(core->memory, core->registers.sedectets.PC);
+    core->instruction = Memory_read(core->memory, core->registers.sedectets.PC);
+    byte opcode = core->instruction & 0xFF;
+    core->opcode = opcode;
     core->registers.sedectets.PC += 1;
 
-    byte opcode = instruction & 0xFF;
-    byte x = (opcode >> 6);
-    byte y = (opcode >> 3) & 7;
-    byte z = (opcode     ) & 7;
-    byte p = y >> 1;
-    byte q = y & 1;
-
-    execute[opcode](core, instruction, x, y, z, p, q);
+    execute[opcode]();
 }

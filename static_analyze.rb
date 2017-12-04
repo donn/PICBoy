@@ -7,7 +7,7 @@ puts "Core.c performance static analyzer"
 
 `rm Core.ll Core.s`
 
-for level in ["0", ""]
+for level in ["0", "2"]
     puts "\nAnalyzing at optimization level #{level}...\n\n"
     `clang -S -emit-llvm -O#{level} Core.c`
     `llc Core.ll -march=mipsel -o Core.s 2> /dev/null`
