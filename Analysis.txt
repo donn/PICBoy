@@ -1,4 +1,4 @@
-[File generated automatically on Mon Dec  4 06:23:57 UTC 2017 with commit]
+[File generated automatically on Mon Dec  4 09:16:21 UTC 2017 with commit]
 Core.c performance static analyzer
 
 Analyzing at optimization level 0...
@@ -15,7 +15,7 @@ Analyzing at optimization level 0...
      add16:  57
      dec16:  16
       rrca:  56
-      stop:   7
+      stop:  14
        rla:  57
         jr:  19
        rra:  57
@@ -26,7 +26,7 @@ Analyzing at optimization level 0...
        scf:  20
        ccf:  32
         ld:  25
-      halt:   7
+      halt:  14
        add:  88
        adc:  92
        sub:  88
@@ -43,7 +43,6 @@ Analyzing at optimization level 0...
       push:  26
        rst:  26
        ret:  23
-        cb:  23
       call:  30
       reti:  11
      ldhna:  23
@@ -57,66 +56,89 @@ Analyzing at optimization level 0...
     ldsphl:  11
       ldaw:  24
         ei:  11
+      rlcn:  74
+      rrcn:  75
+       rln:  76
+       rrn:  76
+      slan:  64
+      sran:  66
+      swap:  58
+      srln:  60
+   testbit:  43
+  resetbit:  28
+    setbit:  27
+cb: 27, Core_cycle: 56
 
-O0 average: 96.05555555555556
+O0 average: 125.921875
 
 
 Analyzing at optimization level 2...
 
        nop:   7
      ldi16:  19
-       ild: 120
-     inc16:   4
-      inc8:  44
-      dec8:  44
-      ldi8:  50
-      rlca:   4
-    ldnnsp:  23
-     add16:   4
-     dec16:   4
-      rrca:   4
-      stop:   7
-       rla:   4
+       ild: 110
+     inc16:  16
+      inc8:  43
+      dec8:  43
+      ldi8:  47
+      rlca:  31
+    ldnnsp:  21
+     add16:  29
+     dec16:  16
+      rrca:  32
+      stop:  14
+       rla:  32
         jr:  15
-       rra:   4
-       jrc:  84
+       rra:  34
+       jrc:  66
       ildm:  43
-       daa:   4
-       cpl:   4
-       scf:  12
-       ccf:  18
-        ld:  76
-      halt:   7
-       add:   9
-       adc:   9
-       sub:   9
-       sbc:   9
-       and:   9
-       xor:   9
-        or:   9
-        cp:  68
-     retcc:  89
-       pop:  27
-       jpc:  74
+       daa:  45
+       cpl:  15
+       scf:  13
+       ccf:  19
+        ld:  78
+      halt:  14
+       add:  72
+       adc:  75
+       sub:  74
+       sbc:  77
+       and:  64
+       xor:  55
+        or:  63
+        cp:  74
+     retcc:  77
+       pop:  28
+       jpc:  56
         jp:  12
-     callc: 130
-      push:   8
-       rst:  26
+     callc: 110
+      push:  25
+       rst:  25
        ret:  22
-        cb:  11
-      call:  29
+      call:  28
       reti:  22
-     ldhna:  23
+     ldhna:  22
       ldca:  18
       jphl:  11
-      ldwa:  22
-     ldhan:  17
-      ldac:  12
-        di:  10
-   ldhlspn:  33
+      ldwa:  21
+     ldhan:  24
+      ldac:  20
+        di:  11
+   ldhlspn:  30
     ldsphl:  11
-      ldaw:  16
-        ei:  10
+      ldaw:  23
+        ei:  11
+      rlcn: 166
+      rrcn: 169
+       rln: 170
+       rrn: 172
+      slan: 133
+      sran: 169
+      swap: 133
+      srln: 133
+   testbit:  63
+  resetbit:  83
+    setbit:  82
+cb: 25, Core_cycle: 41
 
-O2 average: 72.35185185185185
+O2 average: 119.6875
 
