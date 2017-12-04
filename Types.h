@@ -28,5 +28,6 @@
 #define N_FLAG 6
 #define Z_FLAG 7
 
+#define forever for(;;)
 
 #endif

@@ -1,10 +1,13 @@
 .DS_Store
 .build
+Build/
 *.dSYM/
-Packages
-*.xcodeproj
+Packages/
+DerivedData/
 *.gb
 *.tcc
 
 *.ll
 *.s
+
+picboy

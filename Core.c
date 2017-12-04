@@ -1006,8 +1006,16 @@ void Core_setHandles(void (*stop)(), void (*halt)(), struct Memory *memory) {
     core->memory = memory;
 }
 
+#if _DEBUG
+    #include <stdio.h>
+#endif
 void Core_cycle() {
     //Handle interrupts here
+
+#if _DEBUG
+    printf("%x\n", core->registers.sedectets.PC);
+#endif
+    
 
     if (core->propagateEnableInterrupts) {
         core->propagateEnableInterrupts = false;

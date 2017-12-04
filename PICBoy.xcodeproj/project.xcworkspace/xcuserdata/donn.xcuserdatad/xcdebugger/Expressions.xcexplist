@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "xor:Core.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "core-&gt;registers.octets">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ld:Core.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "core-&gt;opcode &amp; 7">
+            </PersistentString>
+            <PersistentString
+               value = "(core-&gt;opcode &gt;&gt; 3) &amp; 7">
+            </PersistentString>
+            <PersistentString
+               value = "core-&gt;registers.sedectets.HL">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ldi8:Core.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "core-&gt;registers.sedectets">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>
