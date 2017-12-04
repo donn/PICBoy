@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "Memory.h"
+#include "Core.h"
 
 const byte game[] = {
 #include "Game.tcc"
@@ -11,11 +12,13 @@ uint32 accessCart(uint32 address) {
     return *access;
 }
 
+void die() {
+    exit(69);
+}
+
 int main() {
-    uint32 address = 0;
     struct Memory* memory = malloc(sizeof(struct Memory));
     memory->accessCart = accessCart;
-    while (address < sizeof(game) - 3) {
-        printf("%08x\n", Memory_read(memory, address++));
-    }
+    Core_init();
+    Core_setHandles(die, die, memory);
 }

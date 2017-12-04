@@ -35,41 +35,228 @@ static byte* rTable(byte y) {
 
 //CB-prefixed Instructions
 
+static void testbit() {
+    if (TEST_BIT(*rTable(FIELD_Z), FIELD_Y)) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    SET_BIT(core->registers.octets.F, H_FLAG);
+}
+
+static void setbit() {
+    SET_BIT(*rTable(FIELD_Z), FIELD_Y);
+}
+
+static void resetbit() {
+    RESET_BIT(*rTable(FIELD_Z), FIELD_Y);
+}
+
+static void rlcn() {
+    //Rotate left, old bit 7 set to carry and new bit 0
+    bit last = *rTable(FIELD_Z) >> 7;
+    *rTable(FIELD_Z) <<= 1;
+    *rTable(FIELD_Z) |= last;
+
+    if (last) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!*rTable(FIELD_Z)) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
+}
+
+static void rrcn() {
+    //Rotate right, old bit 0 set to carry and new bit 7
+    bit first = *rTable(FIELD_Z) & 1;
+    *rTable(FIELD_Z) >>= 1;
+    *rTable(FIELD_Z) |= (first << 7);
+
+    if (first) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!*rTable(FIELD_Z)) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
+}
+
+static void rln() {
+    //Rotate left through carry
+    bit last = *rTable(FIELD_Z) >> 7;
+    *rTable(FIELD_Z) <<= 1;
+    *rTable(FIELD_Z) |= TEST_BIT(core->registers.octets.F, C_FLAG);
+
+    if (last) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!*rTable(FIELD_Z)) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
+}
+
+static void rrn() {
+    //Rotate right through carry
+    bit first = *rTable(FIELD_Z) & 1;
+    *rTable(FIELD_Z) >>= 1;
+    *rTable(FIELD_Z) |= (TEST_BIT(core->registers.octets.F, C_FLAG) << 7);
+
+    if (first) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!*rTable(FIELD_Z)) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
+}
+
+static void slan() {
+    //Shift left into carry
+    bit last = *rTable(FIELD_Z) >> 7;
+    *rTable(FIELD_Z) <<= 1;
+
+    if (last) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!*rTable(FIELD_Z)) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
+}
+
+static void sran() {
+    //Arithmetic shift right into carry
+    bit first = *rTable(FIELD_Z) & 1;
+    *rTable(FIELD_Z) = (displacement)*rTable(FIELD_Z) >> 1;
+
+    if (first) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!*rTable(FIELD_Z)) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+}
+
+static void swap() {
+    SWAP_NIBBLES(*rTable(FIELD_Z));
+    
+    if (!*rTable(FIELD_Z)) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+    RESET_BIT(core->registers.octets.F, H_FLAG);
+    RESET_BIT(core->registers.octets.F, C_FLAG);
+
+}
+
+static void srln() {
+ //Arithmetic shift right into carry
+    bit first = *rTable(FIELD_Z) & 1;
+    *rTable(FIELD_Z) >>= 1;
+
+    if (first) {
+        SET_BIT(core->registers.octets.F, C_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, C_FLAG);
+    }
+
+    if (!*rTable(FIELD_Z)) {
+        SET_BIT(core->registers.octets.F, Z_FLAG);
+    } else {
+        RESET_BIT(core->registers.octets.F, Z_FLAG);
+    }
+
+    RESET_BIT(core->registers.octets.F, N_FLAG);
+}
+
+void (*cbExecute[])() = {
+    rlcn /*00*/, rlcn /*01*/, rlcn /*02*/, rlcn /*03*/, rlcn /*04*/, rlcn /*05*/, rlcn /*06*/, rlcn /*07*/,
+    rrcn /*08*/, rrcn /*09*/, rrcn /*0a*/, rrcn /*0b*/, rrcn /*0c*/, rrcn /*0d*/, rrcn /*0e*/, rrcn /*0f*/,
+    rln /*10*/, rln /*11*/, rln /*12*/, rln /*13*/, rln /*14*/, rln /*15*/, rln /*16*/, rln /*17*/,
+    rrn /*18*/, rrn /*19*/, rrn /*1a*/, rrn /*1b*/, rrn /*1c*/, rrn /*1d*/, rrn /*1e*/, rrn /*1f*/,
+    slan /*20*/, slan /*21*/, slan /*22*/, slan /*23*/, slan /*24*/, slan /*25*/, slan /*26*/, slan /*27*/,
+    sran /*28*/, sran /*29*/, sran /*2a*/, sran /*2b*/, sran /*2c*/, sran /*2d*/, sran /*2e*/, sran /*2f*/,
+    swap /*30*/, swap /*31*/, swap /*32*/, swap /*33*/, swap /*34*/, swap /*35*/, swap /*36*/, swap /*37*/,
+    srln /*38*/, srln /*39*/, srln /*3a*/, srln /*3b*/, srln /*3c*/, srln /*3d*/, srln /*3e*/, srln /*3f*/,
+    testbit /*40*/, testbit /*41*/, testbit /*42*/, testbit /*43*/, testbit /*44*/, testbit /*45*/, testbit /*46*/, testbit /*47*/,
+    testbit /*48*/, testbit /*49*/, testbit /*4a*/, testbit /*4b*/, testbit /*4c*/, testbit /*4d*/, testbit /*4e*/, testbit /*4f*/,
+    testbit /*50*/, testbit /*51*/, testbit /*52*/, testbit /*53*/, testbit /*54*/, testbit /*55*/, testbit /*56*/, testbit /*57*/,
+    testbit /*58*/, testbit /*59*/, testbit /*5a*/, testbit /*5b*/, testbit /*5c*/, testbit /*5d*/, testbit /*5e*/, testbit /*5f*/,
+    testbit /*60*/, testbit /*61*/, testbit /*62*/, testbit /*63*/, testbit /*64*/, testbit /*65*/, testbit /*66*/, testbit /*67*/,
+    testbit /*68*/, testbit /*69*/, testbit /*6a*/, testbit /*6b*/, testbit /*6c*/, testbit /*6d*/, testbit /*6e*/, testbit /*6f*/,
+    testbit /*70*/, testbit /*71*/, testbit /*72*/, testbit /*73*/, testbit /*74*/, testbit /*75*/, testbit /*76*/, testbit /*77*/,
+    testbit /*78*/, testbit /*79*/, testbit /*7a*/, testbit /*7b*/, testbit /*7c*/, testbit /*7d*/, testbit /*7e*/, testbit /*7f*/,
+    resetbit /*80*/, resetbit /*81*/, resetbit /*82*/, resetbit /*83*/, resetbit /*84*/, resetbit /*85*/, resetbit /*86*/, resetbit /*87*/,
+    resetbit /*88*/, resetbit /*89*/, resetbit /*8a*/, resetbit /*8b*/, resetbit /*8c*/, resetbit /*8d*/, resetbit /*8e*/, resetbit /*8f*/,
+    resetbit /*90*/, resetbit /*91*/, resetbit /*92*/, resetbit /*93*/, resetbit /*94*/, resetbit /*95*/, resetbit /*96*/, resetbit /*97*/,
+    resetbit /*98*/, resetbit /*99*/, resetbit /*9a*/, resetbit /*9b*/, resetbit /*9c*/, resetbit /*9d*/, resetbit /*9e*/, resetbit /*9f*/,
+    resetbit /*a0*/, resetbit /*a1*/, resetbit /*a2*/, resetbit /*a3*/, resetbit /*a4*/, resetbit /*a5*/, resetbit /*a6*/, resetbit /*a7*/,
+    resetbit /*a8*/, resetbit /*a9*/, resetbit /*aa*/, resetbit /*ab*/, resetbit /*ac*/, resetbit /*ad*/, resetbit /*ae*/, resetbit /*af*/,
+    resetbit /*b0*/, resetbit /*b1*/, resetbit /*b2*/, resetbit /*b3*/, resetbit /*b4*/, resetbit /*b5*/, resetbit /*b6*/, resetbit /*b7*/,
+    resetbit /*b8*/, resetbit /*b9*/, resetbit /*ba*/, resetbit /*bb*/, resetbit /*bc*/, resetbit /*bd*/, resetbit /*be*/, resetbit /*bf*/,
+    setbit /*c0*/, setbit /*c1*/, setbit /*c2*/, setbit /*c3*/, setbit /*c4*/, setbit /*c5*/, setbit /*c6*/, setbit /*c7*/,
+    setbit /*c8*/, setbit /*c9*/, setbit /*ca*/, setbit /*cb*/, setbit /*cc*/, setbit /*cd*/, setbit /*ce*/, setbit /*cf*/,
+    setbit /*d0*/, setbit /*d1*/, setbit /*d2*/, setbit /*d3*/, setbit /*d4*/, setbit /*d5*/, setbit /*d6*/, setbit /*d7*/,
+    setbit /*d8*/, setbit /*d9*/, setbit /*da*/, setbit /*db*/, setbit /*dc*/, setbit /*dd*/, setbit /*de*/, setbit /*df*/,
+    setbit /*e0*/, setbit /*e1*/, setbit /*e2*/, setbit /*e3*/, setbit /*e4*/, setbit /*e5*/, setbit /*e6*/, setbit /*e7*/,
+    setbit /*e8*/, setbit /*e9*/, setbit /*ea*/, setbit /*eb*/, setbit /*ec*/, setbit /*ed*/, setbit /*ee*/, setbit /*ef*/,
+    setbit /*f0*/, setbit /*f1*/, setbit /*f2*/, setbit /*f3*/, setbit /*f4*/, setbit /*f5*/, setbit /*f6*/, setbit /*f7*/,
+    setbit /*f8*/, setbit /*f9*/, setbit /*fa*/, setbit /*fb*/, setbit /*fc*/, setbit /*fd*/, setbit /*fe*/, setbit /*ff*/,
+};
+
 static void cb() {
     core->registers.sedectets.PC += 1;
-    byte opcode = (core->instruction >> 8) & 0xFF;
-
-    if (opcode >= 0x40) {
-        nibble top = opcode >> 6;
-        if (top == 0x3) {
-            //SET
-        } else if (top == 0x2) {
-            //RESET
-        } else { //if (top == 0x1) {
-            //BIT
-        } // else would be an impossible outcome, anything else is less than 0x40
-    } else {
-        switch (opcode & 0xF8) {
-            case 0x38:
-                //SRL n
-            case 0x30:
-                //SWAP
-            case 0x28:
-                //SRA n
-            case 0x20:
-                //SLA n
-            case 0x18:
-                //RR n
-            case 0x10:
-                //RL n
-            case 0x08:
-                //RRC n
-            case 0x00:
-                //RLC n
-            default:
-                ;//NOP
-        }
-    }
+    core->opcode = (core->instruction >> 8) & 0xFF;
+    cbExecute[core->opcode]();
 }
 
 //Regular Instructions
@@ -108,6 +295,7 @@ static void jrc() {
 }
 
 static void stop() {
+    core->stop();
 }
 static void ldnnsp() {
     //Load sp into memory[nn]
@@ -263,7 +451,7 @@ static void rrca() {
     RESET_BIT(core->registers.octets.F, H_FLAG);
 }
 static void rla() {
-//Rotate left, old bit 7 set to carry and new bit 0
+    //Rotate left through carry
     bit last = core->registers.octets.A >> 7;
     core->registers.octets.A <<= 1;
     core->registers.octets.A |= TEST_BIT(core->registers.octets.F, 4);
@@ -284,7 +472,7 @@ static void rla() {
     RESET_BIT(core->registers.octets.F, H_FLAG);
 }
 static void rra() {
-    //Rotate right, old bit 0 set to carry and new bit 7
+    //Rotate right through carry
     bit first = core->registers.octets.A & 1;
     core->registers.octets.A >>= 1;
     core->registers.octets.A |= (TEST_BIT(core->registers.octets.F, 4) << 7);
@@ -363,7 +551,7 @@ static void ld() {
 }
 
 static void halt() {
-    //Catch fire or something idfk
+    core->halt();
 }
 
 
@@ -805,9 +993,17 @@ void (*execute[])() = {
     ldhlspn /*f8*/, ldsphl /*f9*/, ldaw /*fa*/, ei /*fb*/, nop /*fc*/, nop /*fd*/, cp /*fe*/, rst /*ff*/
 };
 
-void Core_initialize() {
+void Core_init() {
+    core = malloc(sizeof(struct Core));
     core->registers.sedectets.PC = 0x0000;
+    core->registers.sedectets.SP = 0xFFFE;
     core->interrupts = true;
+}
+
+void Core_setHandles(void (*stop)(), void (*halt)(), struct Memory *memory) {
+    core->stop = stop;
+    core->halt = halt;
+    core->memory = memory;
 }
 
 void Core_cycle() {
@@ -824,9 +1020,8 @@ void Core_cycle() {
     }
 
     core->instruction = Memory_read(core->memory, core->registers.sedectets.PC);
-    byte opcode = core->instruction & 0xFF;
-    core->opcode = opcode;
+    core->opcode = core->instruction & 0xFF;
     core->registers.sedectets.PC += 1;
 
-    execute[opcode]();
+    execute[core->opcode]();
 }

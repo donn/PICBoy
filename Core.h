@@ -36,10 +36,14 @@ struct Core { //Static Singleton
     uint32 instruction;
     byte opcode;
 
+    void (*stop)();
+    void (*halt)();
+
     struct Memory *memory;
 };
 
-void Core_initialize();
+void Core_init();
+void Core_setHandles(void (*stop)(), void (*halt)(), struct Memory *memory);
 void Core_cycle();
 
 #endif

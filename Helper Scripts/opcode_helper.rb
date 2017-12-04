@@ -22,38 +22,45 @@ class Integer
     end
 end
 
-for opcode in 0..255
-    #TO-DO: Translate from CPP
-    if (opcode >= 0x40) {
-        nibble top = opcode >> 6;
-        if (top == 0x3) {
-            //SET
-        } else if (top == 0x2) {
-            //RESET
-        } else { //if (top == 0x1) {
-            //BIT
-        } // else would be an impossible outcome, anything else is less than 0x40
-    } else {
-        switch (opcode & 0xF8) {
-            case 0x38:
-                //SRL n
-            case 0x30:
-                //SWAP
-            case 0x28:
-                //SRA n
-            case 0x20:
-                //SLA n
-            case 0x18:
-                //RR n
-            case 0x10:
-                //RL n
-            case 0x08:
-                //RRC n
-            case 0x00:
-                //RLC n
-            default:
-                ;//NOP
-        }
-    }
+cbOpcodeArray = "byte cbExecute[] = {"
 
+for opcode in 0..255
+    if opcode % 8 == 0
+        cbOpcodeArray += "\n   "
+    end
+    #TO-DO: Translate from CPP
+    if opcode >= 0x40 
+        top = opcode >> 6;
+        if (top == 0x3)
+            cbOpcodeArray += " setbit /*%02x*/," % opcode
+        elsif (top == 0x2)
+            cbOpcodeArray +=  " resetbit /*%02x*/," % opcode
+        else 
+            cbOpcodeArray +=  " testbit /*%02x*/," % opcode
+        end
+    else 
+        case (opcode & 0xF8)
+        when 0x38
+            cbOpcodeArray +=  " srln /*%02x*/," % opcode
+        when 0x30
+            cbOpcodeArray +=  " swap /*%02x*/," % opcode
+        when 0x28
+            cbOpcodeArray +=  " sran /*%02x*/," % opcode
+        when 0x20
+            cbOpcodeArray +=  " slan /*%02x*/," % opcode
+        when 0x18
+            cbOpcodeArray +=  " rrn /*%02x*/," % opcode
+        when 0x10
+            cbOpcodeArray +=  " rln /*%02x*/," % opcode
+        when 0x08
+            cbOpcodeArray +=  " rrcn /*%02x*/," % opcode
+        when 0x00
+            cbOpcodeArray +=  " rlcn /*%02x*/," % opcode
+        end
+    end
 end
+
+cbOpcodeArray.chomp!
+cbOpcodeArray += "\n};"
+
+puts cbOpcodeArray
