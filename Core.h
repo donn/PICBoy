@@ -3,7 +3,7 @@
 
 #include "Types.h"
 
-struct Core {
+struct Core { //Static Singleton
     union {
         struct {
             byte A;
@@ -18,22 +18,32 @@ struct Core {
         } octets;
 
         struct {
-            short AF;
-            short BC;
-            short DE;
-            short HL;
-            short SP;
-            short PC;
+            word AF;
+            word BC;
+            word DE;
+            word HL;
+            word SP;
+            word PC;
         } sedectets;
+
+        word octetArray[12];
+        word sedectetArray[6];
     } registers;
 
-    short* rpTable;
-    short* rTable;
+    bool propagateEnableInterrupts, propagateDisableInterrupts;
+    bool interrupts;
+
+    uint32 instruction;
+    byte opcode;
+
+    void (*stop)();
+    void (*halt)();
 
     struct Memory *memory;
 };
 
-void Core_initialize(struct Core* core);
-void Core_machineCycle(struct Core* core);
+void Core_init();
+void Core_setHandles(void (*stop)(), void (*halt)(), struct Memory *memory);
+void Core_cycle();
 
 #endif
