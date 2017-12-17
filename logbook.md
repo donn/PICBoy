@@ -9,3 +9,6 @@
         - [Adafruit ST7735 lib](https://github.com/adafruit/Adafruit-ST7735-Library)
         - [Samsung S6D02A1 lib](https://github.com/sumotoy/TFT_S6D02A1)
             - Seems confusing though. "No SPI transaction"??
+
+- December 12
+    - 
