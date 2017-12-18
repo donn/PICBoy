@@ -26,6 +26,7 @@ struct Core { //Static Singleton
             word PC;
         } sedectets;
 
+        // !FIXME! `word` should be `byte`?
         word octetArray[12];
         word sedectetArray[6];
     } registers;

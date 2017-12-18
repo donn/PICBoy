@@ -6,6 +6,8 @@
  * Revision history: 
  */
 
+#ifndef _hDISPLAY_H
+#define _hDISPLAY_H
 
 #define swap(a, b) do {     \
     __auto_type temp = a;   \
@@ -18,7 +20,7 @@
 #endif
 
 #define CONCAT(a, b) a ## b
-#define NS(x) CONCAT(CONCAT(NAMESPACE, _), x)
+#define NS(x) (CONCAT(NAMESPACE##_ , x))
 
 #define ONES(n) (~(~0 << n))
 
@@ -34,3 +36,7 @@ u8 NS(width), NS(height);
 void
 NS(drawGrayscale)(i16 x, i16 y, const u8* img, i16 w, i16 h);
 
+#undef NAMESPACE
+#undef NS
+
+#endif // _hDISPLAY_H
