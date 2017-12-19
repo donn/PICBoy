@@ -20,3 +20,6 @@ Adapting code from [this guide](http://www.instructables.com/id/Arduino-TFT-disp
 | DC  | 8  |
 | RST | 7  |
 
+##### Comments
+
+`csport->PIO_SODR  |=  cspinmask;`: `SODR` sets the corresponding bits in the mask, `CODR` clears them.

@@ -9,34 +9,73 @@
 #ifndef _hDISPLAY_H
 #define _hDISPLAY_H
 
+#include "Types.h"
+
 #define swap(a, b) do {     \
     __auto_type temp = a;   \
     a = b;                  \
     b = temp;               \
 } while(0)
 
+#define _CONCAT(x, y) x##y
+#define CONCAT(a, b) _CONCAT(a, b)
+
 #if !defined(NAMESPACE)
 #define NAMESPACE pboy
 #endif
 
-#define CONCAT(a, b) a ## b
-#define NS(x) (CONCAT(NAMESPACE##_ , x))
+#define NS(x) CONCAT(CONCAT(NAMESPACE, _), x)
 
-#define ONES(n) (~(~0 << n))
+#define ONES(n) (~(~0u << n))
 
-typedef unsigned short  u16;
-typedef unsigned char   u8;
-typedef signed short    i16;
-typedef signed char     i8;
 
-typedef u8 Gray;
+typedef enum _ScreenDirection {
+    sdUp=0, sdRight, sdDown, sdLeft
+} ScreenDirection;
 
-u8 NS(width), NS(height);
+typedef byte Gray;
+
+static const byte
+    NS(width),
+    NS(height);
 
 void
-NS(drawGrayscale)(i16 x, i16 y, const u8* img, i16 w, i16 h);
+NS(init)();
 
+void
+NS(drawPixel)(byte x, byte y, uint16 color);
+
+void
+NS(drawGrayBitmap)(int16 x0, int16 y0, const byte *restrict bitmap, int16 w, int16 h);
+
+void
+NS(fillRect)(int16 x0, int16 y0, byte color, int16 w, int16 h);
+
+void
+NS(fillScreen)(byte color);
+
+
+#if !_hmDISPLAY_C
 #undef NAMESPACE
 #undef NS
+#else
+#pragma region "SPI bit helpers"
+inline static
+void
+_cs_hi();
+
+inline static
+void
+_cs_lo();
+
+inline static
+void
+_dc_hi();
+
+inline static
+void
+_dc_lo();
+#pragma endregion
+#endif // _hmDISPLAY_C
 
 #endif // _hDISPLAY_H
