@@ -1,0 +1,13 @@
+.DS_Store
+.build
+Build/
+*.dSYM/
+Packages/
+DerivedData/
+*.gb
+*.tcc
+
+*.ll
+*.s
+
+picboy
